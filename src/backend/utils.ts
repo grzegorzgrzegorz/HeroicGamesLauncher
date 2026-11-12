@@ -298,7 +298,7 @@ export async function askForceUninstall(game: Game) {
 }
 
 async function errorHandler(
-  error: string,
+  error: unknown,
   appName: string,
   runner: Runner
 ): Promise<void> {
@@ -316,16 +316,18 @@ async function errorHandler(
 
   if (!error) return
 
-  if (ignoreMessages.some((msg) => error.includes(msg))) return
+  const errorMessage = error instanceof Error ? error.message : String(error)
 
-  if (error.includes(deletedFolderMsg) && appName) {
+  if (ignoreMessages.some((msg) => errorMessage.includes(msg))) return
+
+  if (errorMessage.includes(deletedFolderMsg) && appName) {
     await askForceUninstall(getGame(appName, runner))
     return
   }
 
-  if (legendaryRegex.test(error)) {
+  if (legendaryRegex.test(errorMessage)) {
     const MemoryError = 'MemoryError: '
-    if (error.includes(MemoryError)) {
+    if (errorMessage.includes(MemoryError)) {
       return
     }
 
@@ -334,13 +336,13 @@ async function errorHandler(
       message: i18next.t(
         'box.error.legendary.generic',
         'An error has occurred! Try to Logout and Login on your Epic account. {{newline}}  {{error}}',
-        { error, newline: '\n' }
+        { error: errorMessage, newline: '\n' }
       ),
       type: 'ERROR'
     })
   }
 
-  if (error.includes(expiredCredentials)) {
+  if (errorMessage.includes(expiredCredentials)) {
     return showDialogBoxModalAuto({
       title: plat,
       message: i18next.t(
